@@ -1,0 +1,15 @@
+{
+    "manifest_version": 3,
+    "name": "ContentSnap - Article Summarizer",
+    "version": "1.0",
+    "description": "Summarizes articles into bullet points, TL;DR, or simple format.",
+    "permissions": ["activeTab", "scripting"],
+    "action": {
+      "default_popup": "popup.html"
+    },
+    "background": {
+      "service_worker": "content.js"
+    },
+    "host_permissions": ["<all_urls>"]
+  }
+  
