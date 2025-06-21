@@ -1,4 +1,3 @@
-// Extract visible text from the page
 function getVisibleText() {
     let elements = document.body.getElementsByTagName("*");
     let visibleText = "";
@@ -7,7 +6,6 @@ function getVisibleText() {
         let el = elements[i];
         let style = window.getComputedStyle(el);
 
-        // Skip hidden or script/style elements
         if (
             style.display === "none" ||
             style.visibility === "hidden" ||
