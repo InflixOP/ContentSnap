@@ -1,6 +1,5 @@
 from transformers import pipeline
 
-# Force the pipeline to use PyTorch only
 summarizer = pipeline("summarization", model="facebook/bart-large-cnn", framework="pt")
 
 def chunk_text(text, max_chunk_size=1000):
