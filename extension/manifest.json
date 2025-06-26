@@ -1,15 +1,39 @@
 {
-    "manifest_version": 3,
-    "name": "ContentSnap - Article Summarizer",
-    "version": "1.0",
-    "description": "Summarizes articles into bullet points, TL;DR, or simple format.",
-    "permissions": ["activeTab", "scripting"],
-    "action": {
-      "default_popup": "popup.html"
-    },
-    "background": {
-      "service_worker": "content.js"
-    },
-    "host_permissions": ["<all_urls>"]
+  "manifest_version": 3,
+  "name": "ContentSnap - Smart Article Summarizer",
+  "version": "1.0.0",
+  "description": "Summarize long articles instantly with AI-powered NLP",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:8000/*",
+    "https://your-api-domain.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ContentSnap Summarizer",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   }
-  
+}
