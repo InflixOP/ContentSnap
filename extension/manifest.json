@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "ContentSnap - Smart Article Summarizer",
-  "version": "1.0.0",
-  "description": "Summarize long articles instantly with AI-powered NLP",
+  "name": "ContentSnap - AI Text Summarizer",
+  "version": "2.0.0",
+  "description": "Instantly summarize any text with AI-powered intelligence. Support for bullet points, TL;DR, and detailed summaries.",
   "permissions": [
     "activeTab",
     "storage",
@@ -12,28 +12,23 @@
     "http://localhost:8000/*",
     "https://your-api-domain.com/*"
   ],
-  "action": {
-    "default_popup": "popup.html",
-    "default_title": "ContentSnap Summarizer",
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
-    }
+  "background": {
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["styles.css"]
+      "js": ["content.js"]
     }
   ],
-  "background": {
-    "service_worker": "background.js"
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ContentSnap - Summarize Text"
   },
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
-  }
+  "web_accessible_resources": [
+    {
+      "resources": ["popup.html","popup.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
