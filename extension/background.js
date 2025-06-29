@@ -405,4 +405,4 @@ self.addEventListener('unhandledrejection', (event) => {
 chrome.runtime.onSuspend.addListener(() => {
     console.log('ContentSnap service worker suspending');
     // Clean up any resources if needed
-});
+}); 
