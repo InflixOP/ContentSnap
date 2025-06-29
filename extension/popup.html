@@ -5,6 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ContentSnap</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap');
+
+        :root {
+            --primary: #A855F7;
+            --primary-dark: #7E22CE;
+            --secondary: #F43F5E;
+            --background: #FFFFFF;
+            --surface: #FAFAF9;
+            --surface-hover: #F5F5F4;
+            --text-primary: #1C1917;
+            --text-secondary: #57534E;
+            --text-muted: #78716C;
+            --border: #E7E5E4;
+            --shadow: rgba(0, 0, 0, 0.08);
+            --gradient: linear-gradient(135deg, #A855F7 0%, #D946EF 50%, #F43F5E 100%);
+        }
+
+        [data-theme="dark"] {
+            --primary: #430e18;
+            --primary-dark: #000000;    
+            --secondary: #f472b6;
+            --background: #1c1b1b;
+            --surface: #1e293b;
+            --surface-hover: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --gradient: linear-gradient(135deg, #430e18 0%, #4d1721c9 50%, #421b2272 100%);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,27 +44,19 @@
         }
 
         body {
-            width: 400px;
-            min-height: 500px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
+            width: 420px;
+            min-height: 600px;
+            font-family: 'Inter', -apple-system, 'SF Pro Display', 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
             overflow-x: hidden;
-        }
-
-        .container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 0 0 20px 20px;
-            min-height: 100vh;
-            position: relative;
+            transition: all 0.3s ease;
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient);
             color: white;
-            padding: 20px;
-            text-align: center;
+            padding: 24px 20px;
             position: relative;
             overflow: hidden;
         }
@@ -40,120 +64,281 @@
         .header::before {
             content: '';
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: shimmer 3s ease-in-out infinite;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
         }
 
-        @keyframes shimmer {
-            0%, 100% { transform: translateX(-100%); }
-            50% { transform: translateX(100%); }
+        .header-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
         }
 
         .logo {
             font-size: 24px;
             font-weight: 700;
-            margin-bottom: 5px;
-            position: relative;
-            z-index: 1;
+            letter-spacing: -0.025em;
+            font-family: 'Plus Jakarta Sans', 'SF Pro Display', -apple-system, sans-serif;
         }
 
         .tagline {
             font-size: 12px;
-            opacity: 0.9;
-            position: relative;
-            z-index: 1;
+            opacity: 0.8;
+            font-weight: 400;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .theme-toggle, .menu-btn {
+            width: 36px;
+            height: 36px;
+            background: rgba(255,255,255,0.15);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+            font-size: 16px;
+        }
+
+        .theme-toggle:hover, .menu-btn:hover {
+            background: rgba(255,255,255,0.25);
+            transform: scale(1.05);
         }
 
         .main-content {
-            padding: 25px;
+            padding: 24px 20px;
+        }
+
+        .nav-section {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--background);
+            z-index: 10;
+            display: none;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-section.show {
+            display: block;
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .nav-header {
+            background: var(--gradient);
+            color: white;
+            padding: 24px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .back-btn {
+            width: 36px;
+            height: 36px;
+            background: rgba(255,255,255,0.15);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+            font-size: 18px;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        .nav-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .about-content {
+            padding: 24px 20px;
+        }
+
+        .profile-card {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            background: var(--gradient);
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: white;
+        }
+
+        .profile-name {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .profile-title {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .profile-description {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .info-cards {
+            display: grid;
+            gap: 12px;
+        }
+
+        .info-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .info-card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-card-content {
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text-secondary);
         }
 
         .action-buttons {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
-            margin-bottom: 25px;
+            margin-bottom: 24px;
         }
 
         .btn {
-            padding: 12px 16px;
+            padding: 14px 18px;
             border: none;
             border-radius: 12px;
             font-weight: 600;
+            font-family: 'Inter', -apple-system, 'SF Pro Display', sans-serif;
             font-size: 13px;
+            letter-spacing: -0.01em;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
             text-align: center;
+            border: 1px solid transparent;
         }
 
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: all 0.3s ease;
-        }
-
-        .btn:hover::before {
-            width: 300px;
-            height: 300px;
+        .btn:hover {
+            transform: translateY(-2px);
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary);
             color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 4px 20px #5b33a6;
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            background: var(--primary-dark);
+            box-shadow: 0 8px 25px #1e0123;
         }
 
         .btn-secondary {
-            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-            color: #8b4513;
-            box-shadow: 0 4px 15px rgba(252, 182, 159, 0.3);
+            background: var(--surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
         }
 
         .btn-secondary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(252, 182, 159, 0.4);
+            background: var(--surface-hover);
         }
 
         .options-section {
-            background: rgba(255, 255, 255, 0.7);
+            background: var(--surface);
             border-radius: 16px;
             padding: 20px;
             margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
         }
 
         .section-title {
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 600;
-            color: #4a5568;
-            margin-bottom: 15px;
+            font-family: 'Plus Jakarta Sans', 'SF Pro Display', -apple-system, sans-serif;
+            letter-spacing: -0.015em;
+            color: var(--text-primary);
+            margin-bottom: 16px;
             display: flex;
             align-items: center;
             gap: 8px;
-        }
-
-        .section-title::before {
-            content: '⚙️';
-            font-size: 16px;
         }
 
         .form-group {
@@ -162,26 +347,44 @@
 
         .form-label {
             display: block;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 500;
-            color: #666;
+            font-family: 'Inter', -apple-system, 'SF Pro Display', sans-serif;
+            letter-spacing: -0.01em;
+            color: var(--text-secondary);
             margin-bottom: 6px;
         }
 
         .form-select {
             width: 100%;
-            padding: 10px 12px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
             font-size: 13px;
-            background: white;
+            font-family: 'Inter', -apple-system, 'SF Pro Display', sans-serif;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            background: var(--background);
+            color: var(--text-primary);
             transition: all 0.3s ease;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2378716C' viewBox='0 0 16 16'%3E%3Cpath d='M8 10.5l-4-4h8l-4 4z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+
+        .form-select option {
+            font-family: 'Inter', -apple-system, 'SF Pro Display', sans-serif;
+            font-weight: 500;
+            padding: 8px;
         }
 
         .form-select:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
         }
 
         .textarea-container {
@@ -189,45 +392,38 @@
             margin-bottom: 20px;
         }
 
-        .textarea-container::before {
-            content: '📝';
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            font-size: 16px;
-            z-index: 1;
-        }
-
         .text-input {
             width: 100%;
             min-height: 120px;
-            padding: 12px 12px 12px 40px;
-            border: 2px solid #e2e8f0;
+            padding: 14px;
+            border: 1px solid var(--border);
             border-radius: 12px;
             font-size: 13px;
-            font-family: inherit;
+            font-family: 'Inter', -apple-system, 'SF Pro Display', sans-serif;
+            font-weight: 400;
+            letter-spacing: -0.01em;
             resize: vertical;
             transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.9);
+            background: var(--background);
+            color: var(--text-primary);
         }
 
         .text-input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            background: white;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
         }
 
         .text-input::placeholder {
-            color: #a0aec0;
+            color: var(--text-muted);
         }
 
         .result-section {
-            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            background: var(--surface);
             border-radius: 16px;
             padding: 20px;
             margin-top: 20px;
-            border: 1px solid #e2e8f0;
+            border: 1px solid var(--border);
             display: none;
         }
 
@@ -251,47 +447,63 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 16px;
         }
 
         .result-title {
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 600;
-            color: #2d3748;
+            color: var(--text-primary);
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .result-title::before {
-            content: '✨';
-            font-size: 16px;
-        }
-
         .result-stats {
             font-size: 11px;
-            color: #718096;
-            background: rgba(255, 255, 255, 0.7);
-            padding: 4px 8px;
-            border-radius: 12px;
+            color: var(--text-muted);
+            background: var(--background);
+            padding: 6px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
         }
 
         .result-content {
-            background: white;
-            padding: 16px;
+            background: var(--background);
+            padding: 18px;
             border-radius: 12px;
-            font-size: 13px;
+            font-size: 14px;
             line-height: 1.6;
-            color: #2d3748;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
             white-space: pre-wrap;
             word-wrap: break-word;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background: var(--surface-hover);
+            color: var(--text-primary);
         }
 
         .loading {
             display: none;
             text-align: center;
-            padding: 20px;
+            padding: 40px 20px;
         }
 
         .loading.show {
@@ -301,11 +513,11 @@
         .spinner {
             width: 40px;
             height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
+            margin: 0 auto 16px;
         }
 
         @keyframes spin {
@@ -314,19 +526,27 @@
         }
 
         .loading-text {
-            font-size: 13px;
-            color: #666;
+            font-size: 14px;
+            color: var(--text-secondary);
             font-weight: 500;
         }
 
         .error {
-            background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
-            color: #c53030;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            margin-top: 10px;
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            color: #dc2626;
+            border: 1px solid #fecaca;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            margin-top: 12px;
             display: none;
+            font-weight: 500;
+        }
+
+        [data-theme="dark"] .error {
+            background: linear-gradient(135deg, #451a1a 0%, #7f1d1d 100%);
+            color: #fca5a5;
+            border-color: #7f1d1d;
         }
 
         .error.show {
@@ -340,66 +560,64 @@
             75% { transform: translateX(5px); }
         }
 
-        .copy-btn {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            background: rgba(102, 126, 234, 0.1);
-            border: none;
-            border-radius: 6px;
-            padding: 6px 10px;
-            font-size: 11px;
-            color: #667eea;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .copy-btn:hover {
-            background: rgba(102, 126, 234, 0.2);
-        }
-
         .footer {
             text-align: center;
-            padding: 15px;
-            font-size: 11px;
-            color: #718096;
+            padding: 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            margin-top: 20px;
         }
 
         .footer a {
-            color: #667eea;
+            color: var(--text-secondary);
             text-decoration: none;
+            font-weight: 500;
         }
 
-        /* Scrollbar styling */
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
         ::-webkit-scrollbar {
             width: 6px;
         }
 
         ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
+            background: var(--surface);
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
+            background: var(--border);
             border-radius: 3px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
+            background: var(--text-muted);
         }
     </style>
 </head>
-<body>
+<body data-theme="light">
     <div class="container">
         <div class="header">
-            <div class="logo">ContentSnap</div>
-            <div class="tagline">AI-Powered Text Summarization</div>
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo-icon">✨</div>
+                    <div class="logo-text">
+                        <div class="logo">ContentSnap</div>
+                        <div class="tagline">AI-Powered Summarization</div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+                    <button class="menu-btn" id="menuBtn" title="Menu">⋯</button>
+                </div>
+            </div>
         </div>
 
-        <div class="main-content">
+        <div class="main-content" id="mainContent">
             <div class="action-buttons">
-                <button class="btn btn-primary" id="summarizeSelected">
+                <button class="btn btn-primary" id="selectedTextBtn">
                     📄 Selected Text
                 </button>
                 <button class="btn btn-secondary" id="summarizeCustom">
@@ -408,7 +626,7 @@
             </div>
 
             <div class="options-section">
-                <div class="section-title">Summary Options</div>
+                <div class="section-title">⚙️ Summary Options</div>
                 
                 <div class="form-group">
                     <label class="form-label">Format</label>
@@ -428,6 +646,9 @@
                         <option value="high">🔶 High</option>
                     </select>
                 </div>
+                <button class="btn btn-primary" id="summarizeSelected" style="width: 100%; margin-top: 12px;">
+                    ✨ Generate Summary
+                </button>
             </div>
 
             <div class="textarea-container" id="customTextContainer" style="display: none;">
@@ -437,7 +658,7 @@
                     placeholder="Paste your text here to summarize..."
                     rows="6"
                 ></textarea>
-                <button class="btn btn-primary" id="summarizeBtn" style="width: 100%; margin-top: 10px;">
+                <button class="btn btn-primary" id="summarizeBtn" style="width: 100%; margin-top: 12px;">
                     ✨ Generate Summary
                 </button>
             </div>
@@ -451,7 +672,7 @@
 
             <div class="result-section" id="result">
                 <div class="result-header">
-                    <div class="result-title">Summary Result</div>
+                    <div class="result-title">✨ Summary Result</div>
                     <div class="result-stats" id="resultStats"></div>
                 </div>
                 <div style="position: relative;">
@@ -459,10 +680,55 @@
                     <button class="copy-btn" id="copyBtn">📋 Copy</button>
                 </div>
             </div>
+
+            <div class="footer">
+                Powered by <a href="#" target="_blank">ContentSnap</a>
+            </div>
         </div>
 
-        <div class="footer">
-            Powered by <a href="#" target="_blank">ContentSnap API</a>
+        <div class="nav-section" id="navSection">
+            <div class="nav-header">
+                <button class="back-btn" id="backBtn">←</button>
+                <div class="nav-title">About</div>
+            </div>
+            
+            <div class="about-content">
+                <div class="profile-card">
+                    <div class="profile-avatar">👨‍💻</div>
+                    <div class="profile-name">Your Name</div>
+                    <div class="profile-title">Full Stack Developer</div>
+                    <div class="profile-description">
+                        Passionate developer creating tools to make information more accessible and digestible. ContentSnap helps you quickly understand large amounts of text through AI-powered summarization.
+                    </div>
+                </div>
+
+                <div class="info-cards">
+                    <div class="info-card">
+                        <div class="info-card-title">🚀 About</div>
+                        <div class="info-card-content">
+                            ContentSnap uses advanced AI to create concise, accurate summaries of long texts. Perfect for research, articles, documents, and more.
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-card-title">🛠️ Features</div>
+                        <div class="info-card-content">
+                            • Multiple summary formats<br>
+                            • Adjustable detail levels<br>
+                            • Text selection support<br>
+                            • Copy to clipboard<br>
+                            • Dark/Light themes
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-card-title">📬 Contact</div>
+                        <div class="info-card-content">
+                            Have feedback or suggestions? Feel free to reach out for improvements and feature requests.
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

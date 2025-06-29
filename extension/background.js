@@ -10,21 +10,90 @@ class ContentSnapBackground {
         this.setupMessageHandlers();
         this.setupContextMenus();
         this.setupKeyboardShortcuts();
-        this.setupTabManagement();
-        this.setupInstallationHandlers();
+        this.checkApiHealth();
+    }
+
+    setupInstallHandler() {
+        chrome.runtime.onInstalled.addListener((details) => {
+            if (details.reason === 'install') {
+                this.handleFirstInstall();
+            } else if (details.reason === 'update') {
+                this.handleUpdate(details.previousVersion);
+            }
+        });
+    }
+
+    setupActionHandler() {
+        chrome.action.onClicked.addListener(async (tab) => {
+            try {
+                // Try to get selected text from the current tab
+                const results = await chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    function: () => {
+                        const selection = window.getSelection().toString().trim();
+                        return {
+                            selectedText: selection,
+                            hasSelection: selection.length > 0,
+                            url: window.location.href,
+                            title: document.title
+                        };
+                    }
+                });
+
+                const pageInfo = results[0].result;
+                
+                // Store the selected text for the popup to access
+                if (pageInfo.hasSelection) {
+                    await chrome.storage.local.set({
+                        'selectedText': pageInfo.selectedText,
+                        'sourceUrl': pageInfo.url,
+                        'sourceTitle': pageInfo.title,
+                        'timestamp': Date.now()
+                    });
+                }
+
+                // The popup will automatically open due to action.default_popup
+                console.log('Extension activated on tab:', tab.url);
+                
+            } catch (error) {
+                console.error('Error in action handler:', error);
+                // Popup will still open, but without pre-selected text
+            }
+        });
     }
 
     setupMessageHandlers() {
         chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             switch (request.action) {
-                case 'getStoredText':
-                    sendResponse({ text: this.storedText });
-                    break;
+                case 'getSelectedText':
+                    this.handleGetSelectedText(sender.tab.id)
+                        .then(sendResponse)
+                        .catch(error => sendResponse({ error: error.message }));
+                    return true; // Will respond asynchronously
 
-                case 'storeText':
-                    this.storedText = request.text;
-                    sendResponse({ success: true });
-                    break;
+                case 'summarizeText':
+                    this.handleSummarizeText(request.data)
+                        .then(sendResponse)
+                        .catch(error => sendResponse({ error: error.message }));
+                    return true; // Will respond asynchronously
+
+                case 'openPopupWithText':
+                    this.handleOpenPopupWithText(request.text, sender.tab)
+                        .then(sendResponse)
+                        .catch(error => sendResponse({ error: error.message }));
+                    return true; // Will respond asynchronously
+
+                case 'checkApiHealth':
+                    this.checkApiHealth()
+                        .then(result => sendResponse({ healthy: result }))
+                        .catch(error => sendResponse({ healthy: false, error: error.message }));
+                    return true; // Will respond asynchronously
+
+                case 'getStoredText':
+                    this.getStoredText()
+                        .then(sendResponse)
+                        .catch(error => sendResponse({ error: error.message }));
+                    return true; // Will respond asynchronously
 
                 case 'clearStoredText':
                     this.storedText = '';
@@ -158,36 +227,31 @@ class ContentSnapBackground {
         });
     }
 
-    setupInstallationHandlers() {
-        chrome.runtime.onInstalled.addListener((details) => {
-            if (details.reason === 'install') {
-                this.handleFirstInstall();
-            } else if (details.reason === 'update') {
-                this.handleUpdate(details.previousVersion);
-            }
+    async handleFirstInstall() {
+        console.log('ContentSnap installed for the first time');
+        
+        // Set default settings
+        await chrome.storage.sync.set({
+            format: 'bullet_points',
+            detailLevel: 'medium',
+            autoOpen: true,
+            showNotifications: true
         });
+
+        // Open welcome page or show notification
+        this.showWelcomeNotification();
     }
 
-    async handleOpenPopupWithText(text, tab) {
-        try {
-            // Store the text
-            this.storedText = text;
-            
-            // Try to open the popup
-            await this.openPopup();
-            
-            // Send notification to content script
-            if (tab && tab.id) {
-                chrome.tabs.sendMessage(tab.id, {
-                    action: 'textStored',
-                    text: text
-                }).catch(() => {
-                    // Ignore errors if content script isn't available
-                });
-            }
-        } catch (error) {
-            console.error('Error opening popup with text:', error);
-        }
+    async handleUpdate(previousVersion) {
+        console.log(`ContentSnap updated from ${previousVersion} to ${chrome.runtime.getManifest().version}`);
+        
+        // Handle migration if needed
+        await this.migrateSettings(previousVersion);
+    }
+
+    async migrateSettings(previousVersion) {
+        // Add migration logic here if needed for future updates
+        console.log('Settings migration completed');
     }
 
     async handleGetTabContent(tabId, sendResponse) {
@@ -195,54 +259,32 @@ class ContentSnapBackground {
             const results = await chrome.scripting.executeScript({
                 target: { tabId },
                 function: () => {
-                    // This function runs in the page context
-                    const getMainContent = () => {
-                        const selectors = [
-                            'article',
-                            '[role="main"]',
-                            'main',
-                            '.content',
-                            '.post-content',
-                            '.entry-content',
-                            '.article-content',
-                            '#content',
-                            '.main-content'
-                        ];
-
-                        for (const selector of selectors) {
-                            const element = document.querySelector(selector);
-                            if (element) {
-                                const text = element.innerText.trim();
-                                if (text.length > 100) {
-                                    return text.length > 5000 ? text.substring(0, 5000) + '...' : text;
-                                }
+                    const selection = window.getSelection().toString().trim();
+                    if (selection) {
+                        return {
+                            text: selection,
+                            length: selection.length,
+                            type: 'selection'
+                        };
+                    }
+                    
+                    // Try to get main content
+                    const selectors = ['article', '[role="main"]', 'main', '.content'];
+                    for (const selector of selectors) {
+                        const element = document.querySelector(selector);
+                        if (element) {
+                            const text = element.innerText.trim();
+                            if (text.length > 100) {
+                                return {
+                                    text: text.length > 5000 ? text.substring(0, 5000) + '...' : text,
+                                    length: text.length,
+                                    type: 'content'
+                                };
                             }
                         }
-
-                        // Fallback to body content with cleanup
-                        const bodyClone = document.body.cloneNode(true);
-                        const unwantedSelectors = [
-                            'nav', 'header', 'footer', 'aside',
-                            '.advertisement', '.ads', '.sidebar',
-                            '.navigation', '.menu', '.comments',
-                            'script', 'style', 'noscript'
-                        ];
-                        
-                        unwantedSelectors.forEach(selector => {
-                            const elements = bodyClone.querySelectorAll(selector);
-                            elements.forEach(el => el.remove());
-                        });
-
-                        const text = bodyClone.innerText.replace(/\s+/g, ' ').trim();
-                        return text.length > 5000 ? text.substring(0, 5000) + '...' : text;
-                    };
-
-                    return {
-                        content: getMainContent(),
-                        title: document.title,
-                        url: window.location.href,
-                        selection: window.getSelection().toString().trim()
-                    };
+                    }
+                    
+                    return { text: '', length: 0, type: 'none' };
                 }
             });
 
@@ -251,68 +293,96 @@ class ContentSnapBackground {
                 data: results[0].result
             });
         } catch (error) {
-            console.error('Error getting tab content:', error);
-            sendResponse({
-                success: false,
-                error: error.message
-            });
+            throw new Error('Could not access page content: ' + error.message);
         }
     }
 
-    async handleSummarizeSelectedText(tab, sendResponse) {
+    async handleSummarizeText(data) {
         try {
-            const results = await chrome.scripting.executeScript({
-                target: { tabId: tab.id },
-                function: () => window.getSelection().toString().trim()
+            const response = await fetch(`${this.apiUrl}/summarize`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
             });
 
-            const selectedText = results[0].result;
-            
-            if (!selectedText || selectedText.length < 50) {
-                sendResponse({
-                    success: false,
-                    error: 'No text selected or text too short'
-                });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                throw new Error('Could not connect to ContentSnap API. Please ensure the server is running.');
+            }
+            throw error;
+        }
+    }
+
+    async handleOpenPopupWithText(text, tab) {
+        try {
+            // Store the text for the popup to access
+            await chrome.storage.local.set({
+                'selectedText': text,
+                'sourceUrl': tab.url,
+                'sourceTitle': tab.title,
+                'timestamp': Date.now()
+            });
+
+            // Open the popup (this might not work in MV3, so we'll try different approaches)
+            try {
+                await chrome.action.openPopup();
+            } catch (popupError) {
+                // If popup can't be opened programmatically, we'll use the stored text
+                // when user manually clicks the extension icon
+                console.log('Popup stored text for manual access');
+            }
+
+            return { success: true };
+        } catch (error) {
+            throw new Error('Failed to prepare popup: ' + error.message);
+        }
+    }
+
+    async handleContextMenuClick(info, tab) {
+        try {
+            let textToSummarize = '';
+            let summaryOptions = { format: 'bullet_points', detail_level: 'medium' };
+
+            if (info.menuItemId === 'summarizeSelection' || info.menuItemId === 'quickSummary' || info.menuItemId === 'detailedSummary') {
+                textToSummarize = info.selectionText;
+                
+                if (info.menuItemId === 'quickSummary') {
+                    summaryOptions = { format: 'tldr', detail_level: 'low' };
+                } else if (info.menuItemId === 'detailedSummary') {
+                    summaryOptions = { format: 'detailed', detail_level: 'high' };
+                }
+            } else if (info.menuItemId === 'summarizePage') {
+                const pageText = await this.handleGetSelectedText(tab.id);
+                textToSummarize = pageText.text;
+            }
+
+            if (!textToSummarize || textToSummarize.length < 50) {
+                this.showNotification('Text too short to summarize', 'warning');
                 return;
             }
 
-            // Store the text and open popup
-            this.storedText = selectedText;
-            await this.openPopup();
-            
-            sendResponse({
-                success: true,
-                text: selectedText
-            });
-        } catch (error) {
-            console.error('Error summarizing selected text:', error);
-            sendResponse({
-                success: false,
-                error: error.message
-            });
-        }
-    }
-
-    async handleSummarizePageContent(tab) {
-        try {
-            const results = await chrome.scripting.executeScript({
-                target: { tabId: tab.id },
-                function: () => {
-                    // Get main content from the page
-                    const selectors = ['article', '[role="main"]', 'main', '.content'];
-                    for (const selector of selectors) {
-                        const element = document.querySelector(selector);
-                        if (element && element.innerText.trim().length > 100) {
-                            return element.innerText.trim();
-                        }
-                    }
-                    return document.body.innerText.trim();
-                }
+            // Store text and options for popup
+            await chrome.storage.local.set({
+                'selectedText': textToSummarize,
+                'sourceUrl': tab.url,
+                'sourceTitle': tab.title,
+                'summaryOptions': summaryOptions,
+                'timestamp': Date.now()
             });
 
-            const pageContent = results[0].result;
-            if (pageContent && pageContent.length > 50) {
-                await this.handleOpenPopupWithText(pageContent, tab);
+            // Try to open popup
+            try {
+                await chrome.action.openPopup();
+            } catch (error) {
+                this.showNotification('Right-click context prepared. Click the extension icon to summarize.', 'info');
             }
         } catch (error) {
             console.error('Error summarizing page content:', error);
@@ -321,26 +391,53 @@ class ContentSnapBackground {
 
     async openPopup() {
         try {
-            // For MV3, we need to open the popup programmatically
-            // This creates a new window with the popup
-            const popup = await chrome.windows.create({
-                url: chrome.runtime.getURL('popup.html'),
-                type: 'popup',
-                width: 420,
-                height: 600,
-                focused: true
-            });
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             
-            this.isPopupOpen = true;
-            
-            // Track when popup is closed
-            chrome.windows.onRemoved.addListener((windowId) => {
-                if (windowId === popup.id) {
-                    this.isPopupOpen = false;
+            if (type === 'selection' || type === 'page') {
+                const textData = await this.handleGetSelectedText(tab.id);
+                
+                if (!textData.text || textData.text.length < 50) {
+                    this.showNotification('No text available to summarize', 'warning');
+                    return;
                 }
-            });
+
+                await chrome.storage.local.set({
+                    'selectedText': textData.text,
+                    'sourceUrl': tab.url,
+                    'sourceTitle': tab.title,
+                    'timestamp': Date.now()
+                });
+            }
+
+            // Try to open popup
+            try {
+                await chrome.action.openPopup();
+            } catch (error) {
+                this.showNotification('Press Ctrl+Shift+S again or click the extension icon', 'info');
+            }
+
+        } catch (error) {
+            console.error('Keyboard shortcut error:', error);
+        }
+    }
+
+    async getStoredText() {
+        try {
+            const result = await chrome.storage.local.get(['selectedText', 'sourceUrl', 'sourceTitle', 'summaryOptions', 'timestamp']);
             
-            return popup;
+            // Check if stored text is not too old (10 minutes)
+            if (result.timestamp && (Date.now() - result.timestamp) > 10 * 60 * 1000) {
+                await chrome.storage.local.remove(['selectedText', 'sourceUrl', 'sourceTitle', 'summaryOptions', 'timestamp']);
+                return { text: '', expired: true };
+            }
+
+            return {
+                text: result.selectedText || '',
+                sourceUrl: result.sourceUrl || '',
+                sourceTitle: result.sourceTitle || '',
+                summaryOptions: result.summaryOptions || {},
+                timestamp: result.timestamp || 0
+            };
         } catch (error) {
             console.error('Error opening popup:', error);
             throw error;
@@ -399,12 +496,16 @@ class ContentSnapBackground {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             return tab;
         } catch (error) {
-            console.error('Error getting current tab:', error);
-            return null;
+            console.log('Could not show notification:', error);
         }
     }
 
-    async injectContentScript(tabId) {
+    showWelcomeNotification() {
+        this.showNotification('Welcome to ContentSnap! Select text and right-click to get started.', 'info');
+    }
+
+    // Utility method to inject content script if not already present
+    async ensureContentScript(tabId) {
         try {
             await chrome.scripting.executeScript({
                 target: { tabId },
@@ -412,42 +513,23 @@ class ContentSnapBackground {
             });
             return true;
         } catch (error) {
-            console.error('Error injecting content script:', error);
-            return false;
+            // Content script not present, inject it
+            try {
+                await chrome.scripting.executeScript({
+                    target: { tabId: tabId },
+                    files: ['content.js']
+                });
+            } catch (injectError) {
+                console.error('Failed to inject content script:', injectError);
+            }
         }
     }
-
-    isValidUrl(url) {
-        return url && (url.startsWith('http://') || url.startsWith('https://'));
-    }
-
-    sanitizeText(text) {
-        return text
-            .replace(/\s+/g, ' ')
-            .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
-            .trim();
-    }
 }
 
-// Initialize the background script only after Chrome APIs are ready
-function initializeExtension() {
-    try {
-        const contentSnapBackground = new ContentSnapBackground();
-        console.log('ContentSnap background script initialized successfully');
-    } catch (error) {
-        console.error('Error initializing ContentSnap background script:', error);
-    }
-}
+// Initialize background script
+const contentSnapBackground = new ContentSnapBackground();
 
-// Wait for Chrome APIs to be ready
-if (typeof chrome !== 'undefined' && chrome.runtime) {
-    initializeExtension();
-} else {
-    // Fallback for edge cases
-    document.addEventListener('DOMContentLoaded', initializeExtension);
-}
-
-// Keep service worker alive
+// Handle extension startup
 chrome.runtime.onStartup.addListener(() => {
     console.log('ContentSnap service worker started');
 });
@@ -459,13 +541,13 @@ chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => 
     sendResponse({ received: true });
 });
 
-// Error handling for unhandled promise rejections
-self.addEventListener('unhandledrejection', (event) => {
-    console.error('Unhandled promise rejection in ContentSnap background:', event.reason);
-});
-
-// Clean up on shutdown
+// Handle when extension context is invalidated
 chrome.runtime.onSuspend.addListener(() => {
     console.log('ContentSnap service worker suspending');
     // Clean up any resources if needed 
 });
+
+// Export for potential use in other scripts
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ContentSnapBackground;
+}
