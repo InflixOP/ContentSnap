@@ -37,11 +37,11 @@ class ContentSnapBackground {
 
                 case 'getTabContent':
                     this.handleGetTabContent(sender.tab.id, sendResponse);
-                    return true; // Keep the message channel open for async response
+                    return true;
                     
                 case 'summarizeSelectedText':
                     this.handleSummarizeSelectedText(sender.tab, sendResponse);
-                    return true; // Keep the message channel open for async response
+                    return true;
 
                 case 'updateTabState':
                     this.tabStates.set(sender.tab.id, request.state);
@@ -55,7 +55,7 @@ class ContentSnapBackground {
 
                 case 'checkServerStatus':
                     this.checkServerStatus(sendResponse);
-                    return true; // Keep the message channel open for async response
+                    return true;
 
                 default:
                     sendResponse({ error: 'Unknown action' });
@@ -65,7 +65,6 @@ class ContentSnapBackground {
 
     setupContextMenus() {
         chrome.runtime.onInstalled.addListener(() => {
-            // Create context menu for selected text
             chrome.contextMenus.create({
                 id: 'summarize-selection',
                 title: 'Summarize with ContentSnap',
@@ -73,7 +72,6 @@ class ContentSnapBackground {
                 documentUrlPatterns: ['http://*/*', 'https://*/*']
             });
 
-            // Create context menu for entire page
             chrome.contextMenus.create({
                 id: 'summarize-page',
                 title: 'Summarize this page',
@@ -104,7 +102,6 @@ class ContentSnapBackground {
 
         chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             if (changeInfo.status === 'complete' && tab.url) {
-                // Reset tab state on navigation
                 this.tabStates.delete(tabId);
             }
         });
@@ -122,20 +119,15 @@ class ContentSnapBackground {
 
     async handleOpenPopupWithText(text, tab) {
         try {
-            // Store the text
             this.storedText = text;
             
-            // Try to open the popup
             await this.openPopup();
             
-            // Send notification to content script
             if (tab && tab.id) {
                 chrome.tabs.sendMessage(tab.id, {
                     action: 'textStored',
                     text: text
-                }).catch(() => {
-                    // Ignore errors if content script isn't available
-                });
+                }).catch(() => {});
             }
         } catch (error) {
             console.error('Error opening popup with text:', error);
@@ -147,7 +139,6 @@ class ContentSnapBackground {
             const results = await chrome.scripting.executeScript({
                 target: { tabId },
                 function: () => {
-                    // This function runs in the page context
                     const getMainContent = () => {
                         const selectors = [
                             'article',
@@ -171,7 +162,6 @@ class ContentSnapBackground {
                             }
                         }
 
-                        // Fallback to body content with cleanup
                         const bodyClone = document.body.cloneNode(true);
                         const unwantedSelectors = [
                             'nav', 'header', 'footer', 'aside',
@@ -228,7 +218,6 @@ class ContentSnapBackground {
                 return;
             }
 
-            // Store the text and open popup
             this.storedText = selectedText;
             await this.openPopup();
             
@@ -250,7 +239,6 @@ class ContentSnapBackground {
             const results = await chrome.scripting.executeScript({
                 target: { tabId: tab.id },
                 function: () => {
-                    // Get main content from the page
                     const selectors = ['article', '[role="main"]', 'main', '.content'];
                     for (const selector of selectors) {
                         const element = document.querySelector(selector);
@@ -273,8 +261,6 @@ class ContentSnapBackground {
 
     async openPopup() {
         try {
-            // For MV3, we need to open the popup programmatically
-            // This creates a new window with the popup
             const popup = await chrome.windows.create({
                 url: chrome.runtime.getURL('popup.html'),
                 type: 'popup',
@@ -285,7 +271,6 @@ class ContentSnapBackground {
             
             this.isPopupOpen = true;
             
-            // Track when popup is closed
             chrome.windows.onRemoved.addListener((windowId) => {
                 if (windowId === popup.id) {
                     this.isPopupOpen = false;
@@ -321,7 +306,6 @@ class ContentSnapBackground {
     }
 
     handleFirstInstall() {
-        // Set default settings
         chrome.storage.sync.set({
             format: 'bullet_points',
             detailLevel: 'medium',
@@ -329,23 +313,17 @@ class ContentSnapBackground {
             contextMenu: true
         });
 
-        // Open welcome page or show notification
         chrome.tabs.create({
             url: chrome.runtime.getURL('welcome.html')
         }).catch(() => {
-            // If welcome.html doesn't exist, just show a notification
             console.log('ContentSnap installed successfully');
         });
     }
 
     handleUpdate(previousVersion) {
         console.log(`ContentSnap updated from ${previousVersion} to ${chrome.runtime.getManifest().version}`);
-        
-        // Handle any migration logic here if needed
-        // For example, updating storage schema or settings
     }
 
-    // Utility methods
     async getCurrentTab() {
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -376,33 +354,26 @@ class ContentSnapBackground {
     sanitizeText(text) {
         return text
             .replace(/\s+/g, ' ')
-            .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+            .replace(/[\x00-\x1F\x7F]/g, '')
             .trim();
     }
 }
 
-// Initialize the background script
 const contentSnapBackground = new ContentSnapBackground();
 
-// Keep service worker alive
 chrome.runtime.onStartup.addListener(() => {
     console.log('ContentSnap service worker started');
 });
 
-// Handle external messages (if needed for future integrations)
 chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
-    // Handle messages from external sources if needed
     console.log('External message received:', request);
     sendResponse({ received: true });
 });
 
-// Error handling for unhandled promise rejections
 self.addEventListener('unhandledrejection', (event) => {
     console.error('Unhandled promise rejection in ContentSnap background:', event.reason);
 });
 
-// Clean up on shutdown
 chrome.runtime.onSuspend.addListener(() => {
     console.log('ContentSnap service worker suspending');
-    // Clean up any resources if needed
-}); 
+});
