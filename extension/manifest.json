@@ -4,10 +4,13 @@
   "version": "2.0.0",
   "description": "Instantly summarize any text with AI-powered intelligence. Support for bullet points, TL;DR, and detailed summaries.",
   "permissions": [
-    "activeTab",
+    "contextMenus",
+    "tabs",
+    "scripting",
     "storage",
-    "scripting"
+    "activeTab"
   ],
+ 
   "host_permissions": [
     "http://localhost:8000/*",
     "https://your-api-domain.com/*"
