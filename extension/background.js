@@ -1,4 +1,3 @@
-// ContentSnap Background Service Worker
 class ContentSnapBackground {
     constructor() {
         this.apiUrl = 'http://localhost:8000';
@@ -27,7 +26,6 @@ class ContentSnapBackground {
     setupActionHandler() {
         chrome.action.onClicked.addListener(async (tab) => {
             try {
-                // Try to get selected text from the current tab
                 const results = await chrome.scripting.executeScript({
                     target: { tabId: tab.id },
                     function: () => {
@@ -43,7 +41,6 @@ class ContentSnapBackground {
 
                 const pageInfo = results[0].result;
                 
-                // Store the selected text for the popup to access
                 if (pageInfo.hasSelection) {
                     await chrome.storage.local.set({
                         'selectedText': pageInfo.selectedText,
@@ -53,12 +50,10 @@ class ContentSnapBackground {
                     });
                 }
 
-                // The popup will automatically open due to action.default_popup
                 console.log('Extension activated on tab:', tab.url);
                 
             } catch (error) {
                 console.error('Error in action handler:', error);
-                // Popup will still open, but without pre-selected text
             }
         });
     }
@@ -70,31 +65,31 @@ class ContentSnapBackground {
                     this.handleGetSelectedText(sender.tab.id)
                         .then(sendResponse)
                         .catch(error => sendResponse({ error: error.message }));
-                    return true; // Will respond asynchronously
+                    return true;
 
                 case 'summarizeText':
                     this.handleSummarizeText(request.data)
                         .then(sendResponse)
                         .catch(error => sendResponse({ error: error.message }));
-                    return true; // Will respond asynchronously
+                    return true;
 
                 case 'openPopupWithText':
                     this.handleOpenPopupWithText(request.text, sender.tab)
                         .then(sendResponse)
                         .catch(error => sendResponse({ error: error.message }));
-                    return true; // Will respond asynchronously
+                    return true;
 
                 case 'checkApiHealth':
                     this.checkApiHealth()
                         .then(result => sendResponse({ healthy: result }))
                         .catch(error => sendResponse({ healthy: false, error: error.message }));
-                    return true; // Will respond asynchronously
+                    return true;
 
                 case 'getStoredText':
                     this.getStoredText()
                         .then(sendResponse)
                         .catch(error => sendResponse({ error: error.message }));
-                    return true; // Will respond asynchronously
+                    return true;
 
                 case 'clearStoredText':
                     chrome.storage.local.remove(['selectedText', 'sourceUrl', 'sourceTitle', 'timestamp']);
@@ -164,7 +159,6 @@ class ContentSnapBackground {
     async handleFirstInstall() {
         console.log('ContentSnap installed for the first time');
         
-        // Set default settings
         await chrome.storage.sync.set({
             format: 'bullet_points',
             detailLevel: 'medium',
@@ -172,19 +166,16 @@ class ContentSnapBackground {
             showNotifications: true
         });
 
-        // Open welcome page or show notification
         this.showWelcomeNotification();
     }
 
     async handleUpdate(previousVersion) {
         console.log(`ContentSnap updated from ${previousVersion} to ${chrome.runtime.getManifest().version}`);
         
-        // Handle migration if needed
         await this.migrateSettings(previousVersion);
     }
 
     async migrateSettings(previousVersion) {
-        // Add migration logic here if needed for future updates
         console.log('Settings migration completed');
     }
 
@@ -202,7 +193,6 @@ class ContentSnapBackground {
                         };
                     }
                     
-                    // Try to get main content
                     const selectors = ['article', '[role="main"]', 'main', '.content'];
                     for (const selector of selectors) {
                         const element = document.querySelector(selector);
@@ -254,7 +244,6 @@ class ContentSnapBackground {
 
     async handleOpenPopupWithText(text, tab) {
         try {
-            // Store the text for the popup to access
             await chrome.storage.local.set({
                 'selectedText': text,
                 'sourceUrl': tab.url,
@@ -262,12 +251,9 @@ class ContentSnapBackground {
                 'timestamp': Date.now()
             });
 
-            // Open the popup (this might not work in MV3, so we'll try different approaches)
             try {
                 await chrome.action.openPopup();
             } catch (popupError) {
-                // If popup can't be opened programmatically, we'll use the stored text
-                // when user manually clicks the extension icon
                 console.log('Popup stored text for manual access');
             }
 
@@ -300,7 +286,6 @@ class ContentSnapBackground {
                 return;
             }
 
-            // Store text and options for popup
             await chrome.storage.local.set({
                 'selectedText': textToSummarize,
                 'sourceUrl': tab.url,
@@ -309,7 +294,6 @@ class ContentSnapBackground {
                 'timestamp': Date.now()
             });
 
-            // Try to open popup
             try {
                 await chrome.action.openPopup();
             } catch (error) {
@@ -342,7 +326,6 @@ class ContentSnapBackground {
                 });
             }
 
-            // Try to open popup
             try {
                 await chrome.action.openPopup();
             } catch (error) {
@@ -358,7 +341,6 @@ class ContentSnapBackground {
         try {
             const result = await chrome.storage.local.get(['selectedText', 'sourceUrl', 'sourceTitle', 'summaryOptions', 'timestamp']);
             
-            // Check if stored text is not too old (10 minutes)
             if (result.timestamp && (Date.now() - result.timestamp) > 10 * 60 * 1000) {
                 await chrome.storage.local.remove(['selectedText', 'sourceUrl', 'sourceTitle', 'summaryOptions', 'timestamp']);
                 return { text: '', expired: true };
@@ -409,7 +391,6 @@ class ContentSnapBackground {
         this.showNotification('Welcome to ContentSnap! Select text and right-click to get started.', 'info');
     }
 
-    // Utility method to inject content script if not already present
     async ensureContentScript(tabId) {
         try {
             await chrome.scripting.executeScript({
@@ -419,7 +400,6 @@ class ContentSnapBackground {
                 }
             });
         } catch (error) {
-            // Content script not present, inject it
             try {
                 await chrome.scripting.executeScript({
                     target: { tabId: tabId },
@@ -432,21 +412,17 @@ class ContentSnapBackground {
     }
 }
 
-// Initialize background script
 const contentSnapBackground = new ContentSnapBackground();
 
-// Handle extension startup
 chrome.runtime.onStartup.addListener(() => {
     console.log('ContentSnap extension started');
     contentSnapBackground.checkApiHealth();
 });
 
-// Handle when extension context is invalidated
 chrome.runtime.onSuspend.addListener(() => {
     console.log('ContentSnap extension suspended');
 });
 
-// Export for potential use in other scripts
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ContentSnapBackground;
 }

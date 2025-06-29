@@ -1,4 +1,3 @@
-// ContentSnap Content Script
 class ContentSnapContent {
     constructor() {
         this.selectedText = '';
@@ -10,6 +9,7 @@ class ContentSnapContent {
         this.addTextSelectionListeners();
         this.addKeyboardShortcuts();
         this.listenForMessages();
+        this.injectStyles();
     }
 
     addTextSelectionListeners() {
@@ -27,14 +27,12 @@ class ContentSnapContent {
             }, 10);
         });
 
-        // Hide indicator when clicking elsewhere
         document.addEventListener('mousedown', (e) => {
             if (!e.target.closest('.contentsnap-selection-indicator')) {
                 this.hideSelectionIndicator();
             }
         });
 
-        // Handle text selection changes
         document.addEventListener('selectionchange', () => {
             const selection = window.getSelection();
             if (selection.rangeCount === 0 || selection.toString().trim().length === 0) {
@@ -45,13 +43,11 @@ class ContentSnapContent {
 
     addKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
-            // Ctrl+Shift+S or Cmd+Shift+S to summarize selected text
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'S') {
                 e.preventDefault();
                 this.handleQuickSummarize();
             }
             
-            // Escape to hide selection indicator
             if (e.key === 'Escape') {
                 this.hideSelectionIndicator();
             }
@@ -100,12 +96,10 @@ class ContentSnapContent {
             return selection;
         }
         
-        // Try to get main content if no selection
         return this.extractMainContent();
     }
 
     extractMainContent() {
-        // Priority order for content extraction
         const selectors = [
             'article',
             '[role="main"]',
@@ -128,10 +122,8 @@ class ContentSnapContent {
             }
         }
 
-        // Fallback to body content, excluding navigation and ads
         const bodyClone = document.body.cloneNode(true);
         
-        // Remove unwanted elements
         const unwantedSelectors = [
             'nav', 'header', 'footer', 'aside',
             '.advertisement', '.ads', '.sidebar',
@@ -150,8 +142,8 @@ class ContentSnapContent {
 
     cleanText(text) {
         return text
-            .replace(/\s+/g, ' ')  // Replace multiple whitespace with single space
-            .replace(/\n\s*\n/g, '\n\n')  // Clean up line breaks
+            .replace(/\s+/g, ' ')
+            .replace(/\n\s*\n/g, '\n\n')
             .trim();
     }
 
@@ -169,7 +161,6 @@ class ContentSnapContent {
             </div>
         `;
 
-        // Position the indicator
         const x = event.pageX;
         const y = event.pageY;
         
@@ -184,13 +175,11 @@ class ContentSnapContent {
         document.body.appendChild(indicator);
         this.highlightElement = indicator;
 
-        // Add click handler for summarize button
         const summarizeBtn = indicator.querySelector('#contentsnap-summarize');
         summarizeBtn.addEventListener('click', () => {
             this.handleQuickSummarize();
         });
 
-        // Auto-hide after 5 seconds
         setTimeout(() => {
             this.hideSelectionIndicator();
         }, 5000);
@@ -212,7 +201,6 @@ class ContentSnapContent {
         }
 
         try {
-            // Send message to background script to open popup with selected text
             chrome.runtime.sendMessage({
                 action: 'openPopupWithText',
                 text: selection
@@ -274,7 +262,6 @@ class ContentSnapContent {
     }
 
     showNotification(message, type = 'info') {
-        // Remove existing notifications
         const existing = document.querySelector('.contentsnap-notification');
         if (existing) existing.remove();
 
@@ -298,7 +285,6 @@ class ContentSnapContent {
             animation: slideInRight 0.3s ease-out;
         `;
 
-        // Color based on type
         if (type === 'success') {
             notification.style.background = '#10b981';
         } else if (type === 'warning') {
@@ -309,7 +295,6 @@ class ContentSnapContent {
 
         document.body.appendChild(notification);
 
-        // Auto-remove after 3 seconds
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.style.animation = 'slideOutRight 0.3s ease-in';
@@ -322,7 +307,84 @@ class ContentSnapContent {
         }, 3000);
     }
 
-    // Utility method to check if element is visible
+    injectStyles() {
+        if (document.getElementById('contentsnap-styles')) return;
+
+        const style = document.createElement('style');
+        style.id = 'contentsnap-styles';
+        style.textContent = `
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOutRight {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+
+            .contentsnap-selection-indicator {
+                pointer-events: none;
+            }
+
+            .contentsnap-tooltip {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 8px 12px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                font-size: 12px;
+                pointer-events: auto;
+            }
+
+            .contentsnap-btn {
+                background: rgba(255,255,255,0.2);
+                border: none;
+                color: white;
+                padding: 4px 8px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 11px;
+                font-weight: 500;
+                transition: background 0.2s ease;
+            }
+
+            .contentsnap-btn:hover {
+                background: rgba(255,255,255,0.3);
+            }
+
+            .contentsnap-text-count {
+                opacity: 0.8;
+                font-size: 10px;
+            }
+
+            .contentsnap-highlight {
+                background: #fef08a !important;
+                color: #713f12 !important;
+                padding: 1px 2px;
+                border-radius: 2px;
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+
     isElementVisible(element) {
         const rect = element.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0 && 
@@ -331,7 +393,6 @@ class ContentSnapContent {
                rect.right <= window.innerWidth;
     }
 
-    // Get reading time estimate
     getReadingTime(text) {
         const wordsPerMinute = 200;
         const words = text.trim().split(/\s+/).length;
@@ -340,7 +401,6 @@ class ContentSnapContent {
     }
 }
 
-// Initialize content script
 let contentSnapContent;
 
 if (document.readyState === 'loading') {
@@ -350,77 +410,3 @@ if (document.readyState === 'loading') {
 } else {
     contentSnapContent = new ContentSnapContent();
 }
-
-// Add CSS animations
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-    
-    @keyframes slideOutRight {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-
-    .contentsnap-selection-indicator {
-        pointer-events: none;
-    }
-
-    .contentsnap-tooltip {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 8px 12px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-size: 12px;
-        pointer-events: auto;
-    }
-
-    .contentsnap-btn {
-        background: rgba(255,255,255,0.2);
-        border: none;
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 11px;
-        font-weight: 500;
-        transition: background 0.2s ease;
-    }
-
-    .contentsnap-btn:hover {
-        background: rgba(255,255,255,0.3);
-    }
-
-    .contentsnap-text-count {
-        opacity: 0.8;
-        font-size: 10px;
-    }
-
-    .contentsnap-highlight {
-        background: #fef08a !important;
-        color: #713f12 !important;
-        padding: 1px 2px;
-        border-radius: 2px;
-    }
-`;
-
-document.head.appendChild(style);
