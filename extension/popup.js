@@ -1,31 +1,34 @@
-// ContentSnap Extension Popup Script
 class ContentSnapPopup {
     constructor() {
-        this.apiUrl = 'http://localhost:8000'; // Change this to your API URL
+        this.apiUrl = 'http://localhost:8000';
+        this.currentTheme = 'light';
         this.initializeElements();
         this.attachEventListeners();
         this.loadSettings();
+        this.checkStoredText();
     }
 
     initializeElements() {
-        // Buttons
         this.summarizeSelectedBtn = document.getElementById('summarizeSelected');
         this.summarizeCustomBtn = document.getElementById('summarizeCustom');
         this.summarizeBtn = document.getElementById('summarizeBtn');
         this.copyBtn = document.getElementById('copyBtn');
-
-        // Form elements
+        this.themeToggle = document.getElementById('themeToggle');
+        this.menuBtn = document.getElementById('menuBtn');
+        this.backBtn = document.getElementById('backBtn');
         this.formatSelect = document.getElementById('formatSelect');
         this.detailSelect = document.getElementById('detailSelect');
         this.customText = document.getElementById('customText');
         this.customTextContainer = document.getElementById('customTextContainer');
-
-        // Display elements
         this.loading = document.getElementById('loading');
         this.error = document.getElementById('error');
         this.result = document.getElementById('result');
         this.resultContent = document.getElementById('resultContent');
         this.resultStats = document.getElementById('resultStats');
+        this.mainContent = document.getElementById('mainContent');
+        this.navSection = document.getElementById('navSection');
+        this.selectedTextBtn = document.getElementById('selectedTextBtn');
+        this.optionsSection = document.querySelector('.options-section');
     }
 
     attachEventListeners() {
@@ -33,26 +36,35 @@ class ContentSnapPopup {
         this.summarizeCustomBtn.addEventListener('click', () => this.toggleCustomTextMode());
         this.summarizeBtn.addEventListener('click', () => this.handleCustomText());
         this.copyBtn.addEventListener('click', () => this.copyToClipboard());
-
-        // Save settings when changed
+        this.themeToggle.addEventListener('click', () => this.toggleTheme());
+        this.menuBtn.addEventListener('click', () => this.showNavigation());
+        this.backBtn.addEventListener('click', () => this.hideNavigation());
         this.formatSelect.addEventListener('change', () => this.saveSettings());
         this.detailSelect.addEventListener('change', () => this.saveSettings());
-
-        // Auto-resize textarea
         this.customText.addEventListener('input', (e) => {
             e.target.style.height = 'auto';
             e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
         });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (this.navSection.classList.contains('show')) {
+                    this.hideNavigation();
+                } else if (this.customTextContainer.style.display !== 'none') {
+                    this.toggleCustomTextMode();
+                }
+            }
+        });
+        this.selectedTextBtn.addEventListener('click', () => this.switchToSelectedTextMode());
     }
 
     async loadSettings() {
         try {
-            const result = await chrome.storage.sync.get(['format', 'detailLevel']);
-            if (result.format) {
-                this.formatSelect.value = result.format;
-            }
-            if (result.detailLevel) {
-                this.detailSelect.value = result.detailLevel;
+            const result = await chrome.storage.sync.get(['format', 'detailLevel', 'theme']);
+            if (result.format) this.formatSelect.value = result.format;
+            if (result.detailLevel) this.detailSelect.value = result.detailLevel;
+            if (result.theme) {
+                this.currentTheme = result.theme;
+                this.applyTheme();
             }
         } catch (error) {
             console.log('Could not load settings:', error);
@@ -63,47 +75,102 @@ class ContentSnapPopup {
         try {
             await chrome.storage.sync.set({
                 format: this.formatSelect.value,
-                detailLevel: this.detailSelect.value
+                detailLevel: this.detailSelect.value,
+                theme: this.currentTheme
             });
         } catch (error) {
             console.log('Could not save settings:', error);
         }
     }
 
+    async checkStoredText() {
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'getStoredText' });
+            if (response && response.text && response.text.length > 50) {
+                this.customText.value = response.text;
+                this.showNotification('Pre-loaded text from selection');
+            }
+        } catch (error) {
+            console.log('No stored text found');
+        }
+    }
+
+    toggleTheme() {
+        this.currentTheme = this.currentTheme === 'light' ? 'dark' : 'light';
+        this.applyTheme();
+        this.saveSettings();
+    }
+
+    applyTheme() {
+        document.body.setAttribute('data-theme', this.currentTheme);
+        this.themeToggle.textContent = this.currentTheme === 'light' ? '🌙' : '☀️';
+        this.themeToggle.title = `Switch to ${this.currentTheme === 'light' ? 'dark' : 'light'} theme`;
+    }
+
+    showNavigation() {
+        this.navSection.classList.add('show');
+    }
+
+    hideNavigation() {
+        this.navSection.classList.remove('show');
+    }
+
     toggleCustomTextMode() {
         const isVisible = this.customTextContainer.style.display !== 'none';
         this.customTextContainer.style.display = isVisible ? 'none' : 'block';
-        
+        this.optionsSection.style.display = isVisible ? '' : 'none';
+        this.summarizeSelectedBtn.style.display = isVisible ? '' : 'none';
+        this.summarizeBtn.style.display = isVisible ? 'none' : '';
+        this.summarizeCustomBtn.textContent = '✏️ Custom Text';
         if (!isVisible) {
             this.customText.focus();
-            // Update button text
-            this.summarizeCustomBtn.textContent = '❌ Cancel';
+            this.summarizeCustomBtn.classList.remove('btn-secondary');
+            this.summarizeCustomBtn.classList.add('btn-primary');
+            this.selectedTextBtn.classList.remove('btn-primary');
+            this.selectedTextBtn.classList.add('btn-secondary');
         } else {
-            this.summarizeCustomBtn.textContent = '✏️ Custom Text';
+            this.summarizeCustomBtn.classList.remove('btn-primary');
+            this.summarizeCustomBtn.classList.add('btn-secondary');
+            this.selectedTextBtn.classList.remove('btn-secondary');
+            this.selectedTextBtn.classList.add('btn-primary');
             this.hideResults();
         }
     }
 
+    switchToSelectedTextMode() {
+        this.customTextContainer.style.display = 'none';
+        this.optionsSection.style.display = '';
+        this.summarizeSelectedBtn.style.display = '';
+        this.summarizeBtn.style.display = 'none';
+        this.summarizeCustomBtn.textContent = '✏️ Custom Text';
+        this.hideResults();
+        this.summarizeCustomBtn.classList.remove('btn-primary');
+        this.summarizeCustomBtn.classList.add('btn-secondary');
+        this.selectedTextBtn.classList.remove('btn-secondary');
+        this.selectedTextBtn.classList.add('btn-primary');
+    }
+
     async handleSelectedText() {
         try {
-            // Get selected text from active tab
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             
             const results = await chrome.scripting.executeScript({
                 target: { tabId: tab.id },
                 function: () => {
                     const selection = window.getSelection().toString().trim();
-                    if (selection) {
-                        return selection;
+                    if (selection) return selection;
+                    
+                    const selectors = ['article', '[role="main"]', 'main', '.content', '.post-content'];
+                    for (const selector of selectors) {
+                        const element = document.querySelector(selector);
+                        if (element) {
+                            const text = element.innerText.trim();
+                            if (text.length > 100) {
+                                return text.length > 5000 ? text.substring(0, 5000) + '...' : text;
+                            }
+                        }
                     }
                     
-                    // If no selection, try to get main content
-                    const article = document.querySelector('article');
-                    if (article) {
-                        return article.innerText.trim();
-                    }
-                    
-                    // Fallback to body text (first 5000 chars)
                     const bodyText = document.body.innerText.trim();
                     return bodyText.length > 5000 ? bodyText.substring(0, 5000) + '...' : bodyText;
                 }
@@ -112,7 +179,7 @@ class ContentSnapPopup {
             const selectedText = results[0].result;
             
             if (!selectedText || selectedText.length < 50) {
-                this.showError('No text selected or text too short. Please select some text on the page or use custom text mode.');
+                this.showError('No text selected or text too short. Please select text on the page or use custom text mode.');
                 return;
             }
 
@@ -150,51 +217,41 @@ class ContentSnapPopup {
                 detail_level: this.detailSelect.value
             };
 
-            console.log('Sending request to:', `${this.apiUrl}/summarize`);
-            console.log('Request body:', requestBody);
-
             const response = await fetch(`${this.apiUrl}/summarize`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody)
             });
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+                throw new Error(errorData.detail || `Server error: ${response.status}`);
             }
 
-            const data = await response.json();
-            this.displayResult(data);
+            const result = await response.json();
+            this.showResult(result.summary, text.length);
             
         } catch (error) {
             console.error('Summarization error:', error);
-            
-            if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                this.showError('Could not connect to ContentSnap API. Please make sure the server is running on ' + this.apiUrl);
+            if (error.message.includes('fetch')) {
+                this.showError('Could not connect to the summarization service. Please check if the server is running.');
             } else {
-                this.showError(`Error: ${error.message}`);
+                this.showError(error.message);
             }
         } finally {
             this.hideLoading();
         }
     }
 
-    displayResult(data) {
-        // Update stats
-        const compressionRatio = ((data.original_length - data.summary_length) / data.original_length * 100).toFixed(1);
-        this.resultStats.textContent = `${data.summary_length} chars (${compressionRatio}% reduction)`;
+    showResult(summary, originalLength) {
+        this.resultContent.textContent = summary;
+        const wordCount = summary.split(/\s+/).length;
+        const compressionRatio = Math.round((1 - summary.length / originalLength) * 100);
         
-        // Display summary
-        this.resultContent.textContent = data.summary;
-        
-        // Show result section with animation
+        this.resultStats.textContent = `${wordCount} words • ${compressionRatio}% shorter`;
         this.result.classList.add('show');
         
-        // Scroll to result
-        this.result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        this.result.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     showLoading() {
@@ -225,45 +282,54 @@ class ContentSnapPopup {
     async copyToClipboard() {
         try {
             await navigator.clipboard.writeText(this.resultContent.textContent);
-            
-            // Visual feedback
             const originalText = this.copyBtn.textContent;
             this.copyBtn.textContent = '✅ Copied!';
-            this.copyBtn.style.background = 'rgba(72, 187, 120, 0.2)';
-            this.copyBtn.style.color = '#38a169';
+            this.copyBtn.style.background = '#10b981';
             
             setTimeout(() => {
                 this.copyBtn.textContent = originalText;
-                this.copyBtn.style.background = 'rgba(102, 126, 234, 0.1)';
-                this.copyBtn.style.color = '#667eea';
+                this.copyBtn.style.background = '';
             }, 2000);
-            
         } catch (error) {
-            console.error('Could not copy text:', error);
-            this.showError('Could not copy to clipboard');
+            console.error('Failed to copy:', error);
+            this.showError('Failed to copy to clipboard');
         }
     }
 
-    // Utility method to check API health
-    async checkApiHealth() {
-        try {
-            const response = await fetch(`${this.apiUrl}/health`);
-            return response.ok;
-        } catch (error) {
-            return false;
-        }
+    showNotification(message) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--primary);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 1000;
+            animation: fadeInOut 3s ease-in-out;
+        `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 3000);
     }
 }
 
-// Initialize popup when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.contentSnapPopup = new ContentSnapPopup();
-});
-
-// Handle extension icon click
-chrome.runtime.onMessage?.addListener((request, sender, sendResponse) => {
-    if (request.action === 'openPopup') {
-        // Popup is already open, no additional action needed
-        sendResponse({ success: true });
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes fadeInOut {
+        0%, 100% { opacity: 0; transform: translateY(-10px); }
+        10%, 90% { opacity: 1; transform: translateY(0); }
     }
+`;
+document.head.appendChild(style);
+
+document.addEventListener('DOMContentLoaded', () => {
+    new ContentSnapPopup();
 });
