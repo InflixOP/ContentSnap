@@ -1,16 +1,14 @@
 {
   "manifest_version": 3,
   "name": "ContentSnap - AI Text Summarizer",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "description": "Instantly summarize any text with AI-powered intelligence. Support for bullet points, TL;DR, and detailed summaries.",
   "permissions": [
     "contextMenus",
     "tabs",
     "scripting",
-    "storage",
-    "scripting"
+    "storage"
   ],
- 
   "host_permissions": [
     "http://localhost:8000/*",
     "https://your-api-domain.com/*"
@@ -20,11 +18,23 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "ContentSnap - Summarize Text"
+    "default_title": "ContentSnap - Summarize Text",
+    "default_icon": {
+      "16": "icons/cp.png",
+      "32": "icons/cp.png",
+      "48": "icons/cp.png",
+      "128": "icons/cp.png"
+    }
   },
+  "icons": {
+    "16": "icons/cp.png",
+    "32": "icons/cp.png",
+    "48": "icons/cp.png",
+    "128": "icons/cp.png"
+  },  
   "web_accessible_resources": [
     {
-      "resources": ["popup.html","popup.js"],
+      "resources": ["popup.html", "popup.js"],
       "matches": ["<all_urls>"]
     }
   ]

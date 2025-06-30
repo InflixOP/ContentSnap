@@ -314,7 +314,7 @@ class ContentSnapBackground {
         });
 
         chrome.tabs.create({
-            url: chrome.runtime.getURL('welcome.html')
+            url: chrome.runtime.getURL('popup.html')
         }).catch(() => {
             console.log('ContentSnap installed successfully');
         });
