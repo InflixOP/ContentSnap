@@ -24,28 +24,50 @@
 
 ### Method 1: Install from GitHub Releases (Recommended)
 
+#### Step 1: Start the Backend Server
+1. **Navigate to the backend folder:**
+   - After extracting the ZIP file, you'll find two folders: `backend` and `extension`
+   - Open a terminal/command prompt in the `backend` folder
+2. **Install dependencies (if needed):**
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. **Start the backend server:**
+   ```bash
+   python app.py
+   ```
+   - Keep this terminal window open - the backend server must be running for the extension to work
+   - You should see a message indicating the server is running (typically on `http://localhost:5000`)
+
+#### Step 2: Download and Extract the Extension
 1. **Download the latest release:**
    - Go to [Releases](https://github.com/InflixOP/ContentSnap/releases)
    - Download `ContentSnap-v[version]-extension.zip`
    - Extract the ZIP file
 
-2. **Install in Chrome/Edge:**
-   - Open `chrome://extensions/` (or `edge://extensions/`)
-   - Enable "Developer mode" (toggle in top-right)
-   - Click "Load unpacked"
-   - Select the extracted ContentSnap folder
-   - Pin the extension to your toolbar
+#### Step 3: Install the Browser Extension
+**For Chrome/Edge:**
+- Open `chrome://extensions/` (or `edge://extensions/`)
+- Enable "Developer mode" (toggle in top-right)
+- Click "Load unpacked"
+- Select the `extension` folder (not the main ContentSnap folder)
+- Pin the extension to your toolbar
 
-3. **Install in Firefox:**
-   - Open `about:debugging`
-   - Click "This Firefox"
-   - Click "Load Temporary Add-on"
-   - Select `manifest.json` from the extracted folder
+**For Firefox:**
+- Open `about:debugging`
+- Click "This Firefox"
+- Click "Load Temporary Add-on"
+- Select `manifest.json` from the `extension` folder
+
+#### Important Notes:
+- **Backend must be running**: Always start the backend server (`python app.py`) before using the extension
+- **Two folders**: The main ContentSnap folder contains both `backend` and `extension` folders
+- **Select the right folder**: When loading the extension, select the `extension` folder, not the main ContentSnap folder
 
 ### Method 2: Build from Source
 
 ```bash
-# Clone the repository
+# Clone the repository  
 git clone https://github.com/InflixOP/ContentSnap.git
 cd ContentSnap
 
