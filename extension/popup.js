@@ -154,27 +154,44 @@ class ContentSnapPopup {
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             
+            if (!tab || !tab.id) {
+                throw new Error('No active tab found');
+            }
+
+            if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('edge://') || tab.url.startsWith('about:')) {
+                throw new Error('Cannot access this page. Extension cannot run on browser pages.');
+            }
+            
             const results = await chrome.scripting.executeScript({
                 target: { tabId: tab.id },
                 function: () => {
-                    const selection = window.getSelection().toString().trim();
-                    if (selection) return selection;
-                    
-                    const selectors = ['article', '[role="main"]', 'main', '.content', '.post-content'];
-                    for (const selector of selectors) {
-                        const element = document.querySelector(selector);
-                        if (element) {
-                            const text = element.innerText.trim();
-                            if (text.length > 100) {
-                                return text.length > 5000 ? text.substring(0, 5000) + '...' : text;
+                    try {
+                        const selection = window.getSelection().toString().trim();
+                        if (selection) return selection;
+                        
+                        const selectors = ['article', '[role="main"]', 'main', '.content', '.post-content'];
+                        for (const selector of selectors) {
+                            const element = document.querySelector(selector);
+                            if (element) {
+                                const text = element.innerText.trim();
+                                if (text.length > 100) {
+                                    return text.length > 5000 ? text.substring(0, 5000) + '...' : text;
+                                }
                             }
                         }
+                        
+                        const bodyText = document.body.innerText.trim();
+                        return bodyText.length > 5000 ? bodyText.substring(0, 5000) + '...' : bodyText;
+                    } catch (err) {
+                        console.error('Error in content script:', err);
+                        return null;
                     }
-                    
-                    const bodyText = document.body.innerText.trim();
-                    return bodyText.length > 5000 ? bodyText.substring(0, 5000) + '...' : bodyText;
                 }
             });
+
+            if (!results || !results[0] || results[0].result === null) {
+                throw new Error('Failed to execute content script');
+            }
 
             const selectedText = results[0].result;
             
@@ -186,7 +203,13 @@ class ContentSnapPopup {
             await this.summarizeText(selectedText);
         } catch (error) {
             console.error('Error getting selected text:', error);
-            this.showError('Could not access page content. Please try selecting text manually or use custom text mode.');
+            if (error.message.includes('Cannot access this page')) {
+                this.showError(error.message);
+            } else if (error.message === 'No active tab found') {
+                this.showError('No active tab found. Please try again.');
+            } else {
+                this.showError('Could not access page content. Please try selecting text manually or use custom text mode.');
+            }
         }
     }
 
