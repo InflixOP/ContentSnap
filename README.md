@@ -119,15 +119,6 @@ Access settings by clicking the gear icon in the extension popup:
 
 ---
 
-## 🌟 Screenshots
-
-| Feature | Preview |
-|---------|---------|
-| **Main Interface** | ![Main UI](screenshots/main-interface.png) |
-| **Summary Types** | ![Summary Options](screenshots/summary-types.png) |
-| **Custom Text** | ![Settings](screenshots/custom.png) |
-
----
 
 ## 🤝 Contributing
 
