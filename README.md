@@ -17,6 +17,7 @@
 - 🔹 **Offline capable** with local NLP processing
 - 🔹 **Privacy-focused**: No data sent to external servers
 - 🔹 **Customizable summary length** (Short, Medium, Detailed)
+- 🔹 **Pegasus AI Model** for superior summarization quality
 
 ---
 
@@ -89,7 +90,7 @@ npm run build
 | **Frontend**   | HTML5, CSS3, Vanilla JavaScript |
 | **Extension API** | Chrome Extensions API v3 |
 | **NLP Processing** | TensorFlow.js, Web Workers |
-| **Models**     | DistilBART, TinyBERT (optimized for browser) |
+| **Models**     | Google Pegasus, DistilBART, TinyBERT (optimized for browser) |
 | **Storage**    | Chrome Storage API |
 | **Permissions** | activeTab, storage |
 
