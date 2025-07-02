@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ContentSnap - AI Text Summarizer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Instantly summarize any text with AI-powered intelligence. Support for bullet points, TL;DR, and detailed summaries.",
   "permissions": [
     "contextMenus",
